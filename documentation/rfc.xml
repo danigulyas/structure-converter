@@ -197,7 +197,7 @@ but you should provide more than just the abstract. -->
       <t>
         <list style="symbols">
           <t>"type": Type of the property, see "Types of property objects" below</t>
-          <t>"ref": Where the data in the original structure is, this variable must be a valid <eref target="http://goessner.net/articles/JsonPath/">JSONPath address</eref>.</t>
+          <t>"ref": Where the data in the original structure is, this variable must be a valid <eref target="http://goessner.net/articles/JsonPath/">JSONPath address</eref>. Please note that the type "object", should but not must contain a "ref" key.</t>
         </list>
       </t>
 
@@ -211,29 +211,28 @@ but you should provide more than just the abstract. -->
 
 
           <section title="boolean">
-              <t>The data located on parameter "ref" will be converted to a boolean if it's not a boolean.
+              <t>The data referenced by parameter "ref" will be converted to a boolean if it's not a boolean.
                 The boolean conversion must be identical to the one declared in <eref target="http://www.ecma-international.org/ecma-262/5.1/#sec-9.2">EcmaScript's ToBoolean constructor</eref>.</t>
           </section>
 
           <section title="integer">
 
-            <t>The data located on parameter "ref" will be converted to an integer if it's not an integer.
+            <t>The data referenced by parameter "ref" will be converted to an integer if it's not an integer.
                 The integer conversion must be identical to the one declared in <eref target="http://www.ecma-international.org/ecma-262/5.1/#sec-9.3">EcmaScript's ToNumber constructor</eref>.</t>
 
            </section>
 
           <section title="string">
-            <t>The data located on parameter "ref" will be converted to a string if it's not a string.
+            <t>The data referenced by parameter "ref" will be converted to a string if it's not a string.
               The string conversion must be identical to the one declared in <eref target="http://www.ecma-international.org/ecma-262/5.1/#sec-9.8">EcmaScript's ToString constructor</eref>.</t>
           </section>
 
           <section title="array">
-            <t>The data located on parameter "ref" will be placed, if the "ref" is not an array, it'll become the first element of an array.</t>
+            <t>The data referenced by parameter "ref" will be placed, if the "ref" is not an array, it'll become the first element of an array.</t>
 
-            <section title="Optional parameters of type array">
               <section title="mergeWithProperties">
                   <t>The property "mergeWithProperties" is optional, but if included it must be an array, containing JSONPaths.</t>
-                  <t>The data located on parameter "ref" will be merged with the data located in the "mergeWithProperties" array.
+                  <t>The data referenced by parameter "ref" will be merged with the data located in the "mergeWithProperties" array.
                     See an example below:
                   </t>
                   <t>
@@ -253,13 +252,86 @@ but you should provide more than just the abstract. -->
               <section title="itemType">
                 <t>The property "itemType" is optional, but when included must be a valid type (same rules apply to this property as to Object property's type property). When added, the constructed array's items will be converted to this type.</t>
               </section>
-            </section>
+
+               <section title="mutators">
+                <t>The property "mutators" is optional, but when included must be an array consisting from valid string names of mutator(s) and must not be empty.
+                  The implementation of a Data Structure Converter for the "array" Property object type must implement 2 basic mutator:
+                  <list style="symbols">
+                    <t>"nonfalse", must remove all false (see boolean conversion) items from the array.</t>
+                    <t>"unique", must remove all non-unique item from the array, equality checking implemented must be identical to <eref target="http://www.ecma-international.org/ecma-262/5.1/#sec-11.9.4">EcmaScript's === operator</eref>.</t>
+                  </list>
+                </t>
+              </section>
 
            <section title="Conversion of arrays">
-             <t>One may include references both in "ref" and in "mergeWithProperties" pointing to non-array values, in this case it'll be the first element of an array.
+             <t>One may include references both in "ref" and in "mergeWithProperties" pointing to non-array values (not recommended), in this case the value it'll be the first element of an array.
              </t>
            </section>
          </section>
+
+          <section title="object">
+            <t>The data referenced by parameter "ref" must be placed, if "mergeWithProperties" occour the referenced object's keys must be merged into a single object.</t>
+
+            <section title="mergeWithProperties">
+              <t>The key "mergeWithProperties" is optional, if placed it must be an array consisting of JSONPath references. References should point to Objects, if the data referenced is not an Object, it'll be converted into an Object (see below).</t>
+            </section>
+            <section title="children">
+              <t>The key "children" is optional, if placed it must be an array containing Property objects.</t>
+              <t>A Property object in a Property object's "children" key must have a "name" attribute.
+                A Property object with type "object" can be infinitely nested inside itself.
+                     <figure>
+                    <artwork><![CDATA[
+{
+  "type": "object",
+  "mergeWithProperties": ["$.store.book[*]"],
+  "children": [
+    {
+      "name": "priceOfTheBike",
+      "type": "integer",
+      "ref": "$.store.bicycle.price"
+    },
+    {
+      "name": "bookPrices",
+      "type": "array",
+      "ref": "$.store.book[*].price"
+    },
+    {
+      "name": "subObjectProperty",
+      "type": "object",
+      "children": [
+        {
+          "name": "bookCategories",
+          "type": "array",
+          "ref": "$.store.book[*].category"
+        }
+      ]
+    }
+  ]
+}]]></artwork>
+                   </figure>
+              </t>
+            </section>
+            <section title="Percussive keys">
+              <t>In case of percussive keys the priority is the following:
+                <list style="numbers">
+                  <t>Key's found in parameter "children".</t>
+                  <t>Key's found in references of "mergeWithProperties"</t>
+                  <t>Key's found in reference of key "ref"</t>
+                </list>
+                The value with the highest priority must be placed with the key.
+              </t>
+            </section>
+            <section title="Conversion of objects">
+              <t>If the data referenced by "ref" or any data referenced in "mergeWithProperties" is not an object a conversion will happen.
+                The object conversion must apply to the following ruleset:
+                <list style="symbols">
+                  <t>The created object must have a "__values" key.</t>
+                  <t>The created object's "__values" property must be an array, and must contain any non-object value referenced in "ref" and (if included) "mergeWithProperties".</t>
+                  <t>If multiple "__values" arrays occour they'll be merged into one.</t>
+                </list>
+              </t>
+            </section>
+          </section>
     </section>
 
          <section title="Relationship to Other MIB Modules">
