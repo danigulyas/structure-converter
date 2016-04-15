@@ -9,6 +9,6 @@
   "author": "Daniel Gulyas (guldanabz@gmail.com)",
   "license": "WTFPL",
   "dependencies": {
-    "electrolyte": "^0.2.2"
+    "jsonpath-plus": "^0.15.0"
   }
 }
