@@ -1,0 +1,14 @@
+{
+  "name": "schema-converter",
+  "version": "0.0.1",
+  "description": "A module to move data from one structure to another with data hydration.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Daniel Gulyas (guldanabz@gmail.com)",
+  "license": "WTFPL",
+  "dependencies": {
+    "electrolyte": "^0.2.2"
+  }
+}
